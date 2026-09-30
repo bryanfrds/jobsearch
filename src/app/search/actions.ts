@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { savedJobs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 
@@ -25,7 +25,7 @@ export async function saveJob(input: SaveJobInput): Promise<{ ok: boolean }> {
   if (!job.success) return { ok: false };
   const postedAt = job.data.postedAt ? new Date(job.data.postedAt) : null;
 
-  await db
+  await getDb()
     .insert(savedJobs)
     .values({
       userId,

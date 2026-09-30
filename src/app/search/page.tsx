@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { profiles, savedJobs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { DATE_POSTED, EMPLOYMENT_TYPES, searchJobs, type Job } from "@/lib/jsearch";
@@ -41,14 +41,14 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const remote = sp.remote === "1";
   const cursor = str(sp.cursor) || undefined;
 
-  const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+  const [profile] = await getDb().select().from(profiles).where(eq(profiles.userId, userId));
   const result = q
     ? await searchJobs({ query: q, location: loc, datePosted: date, employmentType: type, remoteOnly: remote, cursor })
     : null;
 
   let savedIds = new Set<string>();
   if (result?.ok) {
-    const rows = await db
+    const rows = await getDb()
       .select({ jobId: savedJobs.jobId })
       .from(savedJobs)
       .where(eq(savedJobs.userId, userId));

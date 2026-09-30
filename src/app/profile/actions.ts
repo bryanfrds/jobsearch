@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { profiles } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 
@@ -22,7 +22,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   if (!parsed.success) return { status: "error" };
 
   const values = { ...parsed.data, updatedAt: new Date() };
-  await db
+  await getDb()
     .insert(profiles)
     .values({ userId, ...values })
     .onConflictDoUpdate({ target: profiles.userId, set: values });

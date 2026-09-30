@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { jobStatus, savedJobs, type JobStatus, type SavedJob } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { removeJob, updateJob } from "./actions";
@@ -18,7 +18,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   const { status } = await searchParams;
   const filter = jobStatus.enumValues.find((s) => s === status);
 
-  const rows = await db
+  const rows = await getDb()
     .select()
     .from(savedJobs)
     .where(eq(savedJobs.userId, userId))

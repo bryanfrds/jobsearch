@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { jobStatus, savedJobs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 
@@ -26,7 +26,7 @@ export async function updateJob(formData: FormData) {
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
 
-  await db
+  await getDb()
     .update(savedJobs)
     .set({ status: parsed.data.status, notes: parsed.data.notes, updatedAt: new Date() })
     .where(ownJob(userId, parsed.data.id));
@@ -38,6 +38,6 @@ export async function removeJob(formData: FormData) {
   const parsed = id.safeParse(formData.get("id"));
   if (!parsed.success) return;
 
-  await db.delete(savedJobs).where(ownJob(userId, parsed.data));
+  await getDb().delete(savedJobs).where(ownJob(userId, parsed.data));
   revalidatePath("/jobs");
 }
