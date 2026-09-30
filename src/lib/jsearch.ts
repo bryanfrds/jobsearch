@@ -30,7 +30,7 @@ const apiJob = z.object({
   job_publisher: z.string().nullish(),
   job_employment_type: z.string().nullish(),
   // Listings without a usable link can't be applied to or saved; drop them.
-  job_apply_link: z.url().max(2000),
+  job_apply_link: z.url({ protocol: /^https?$/ }).max(8000),
   job_description: z.string().nullish(),
   job_is_remote: z.boolean().nullish(),
   job_posted_at_datetime_utc: z.string().nullish(),
@@ -148,14 +148,15 @@ function toJob(j: z.infer<typeof apiJob>): Job {
 }
 
 // The same role is often listed on several job boards; keep the first copy.
-export function jobKey(title: string, company: string): string {
-  return `${title}|${company}`.toLowerCase();
+// Same title at the same company in different cities are separate jobs.
+export function jobKey(j: { title: string; company: string; location: string }): string {
+  return `${j.title}|${j.company}|${j.location}`.toLowerCase();
 }
 
 function dedupe(jobs: Job[]): Job[] {
   const seen = new Set<string>();
   return jobs.filter((j) => {
-    const key = jobKey(j.title, j.company);
+    const key = jobKey(j);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

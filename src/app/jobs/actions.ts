@@ -7,7 +7,7 @@ import { getDb } from "@/db";
 import { jobStatus, savedJobs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 
-const id = z.coerce.number().int().positive();
+const id = z.coerce.number().int().positive().max(2_147_483_647);
 
 // Every write is scoped to the signed-in user, so one person can't edit
 // another's saved job by guessing its id.

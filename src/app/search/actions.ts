@@ -11,10 +11,10 @@ const jobInput = z.object({
   title: z.string().min(1).max(300),
   company: z.string().max(200),
   location: z.string().max(200),
-  url: z.url().max(2000),
+  url: z.url({ protocol: /^https?$/ }).max(8000),
   source: z.string().max(100),
   salary: z.string().max(100),
-  postedAt: z.string().nullable(),
+  postedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
 export type SaveJobInput = z.infer<typeof jobInput>;
