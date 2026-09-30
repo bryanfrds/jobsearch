@@ -1,0 +1,47 @@
+import type { Job } from "./jsearch";
+
+// Sample listings for local development when JSEARCH_MOCK=1 and no API key.
+export const MOCK_JOBS: Job[] = [
+  {
+    id: "mock-1",
+    title: "Frontend Developer (React)",
+    company: "Grab",
+    logo: null,
+    location: "Petaling Jaya, Selangor",
+    url: "https://example.com/jobs/1",
+    source: "JobStreet",
+    employmentType: "Full-time",
+    isRemote: false,
+    postedAt: "2026-09-27T00:00:00.000Z",
+    salary: "RM6,000–RM9,000/mo",
+    snippet: "Build and ship customer-facing features in React and TypeScript with a product team of eight.",
+  },
+  {
+    id: "mock-2",
+    title: "Data Analyst",
+    company: "Maybank",
+    logo: null,
+    location: "Kuala Lumpur",
+    url: "https://example.com/jobs/2",
+    source: "LinkedIn",
+    employmentType: "Full-time",
+    isRemote: false,
+    postedAt: "2026-09-25T00:00:00.000Z",
+    salary: "",
+    snippet: "Own weekly reporting for retail banking. SQL, Power BI and stakeholder communication required.",
+  },
+  {
+    id: "mock-3",
+    title: "Software Engineer Intern",
+    company: "Carsome",
+    logo: null,
+    location: "Remote",
+    url: "https://example.com/jobs/3",
+    source: "Hiredly",
+    employmentType: "Internship",
+    isRemote: true,
+    postedAt: null,
+    salary: "RM1,500/mo",
+    snippet: "Six-month internship on the inspections platform. Node.js or Go experience is a plus.",
+  },
+];
