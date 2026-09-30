@@ -1,10 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/"]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
-});
+// Only attaches Clerk's session to each request. Access is enforced per page
+// and per server action with requireUserId(), not by path matching here.
+export default clerkMiddleware();
 
 export const config = {
   matcher: [

@@ -1,10 +1,10 @@
 import "server-only";
 import { auth } from "@clerk/nextjs/server";
 
-// The proxy already blocks signed-out visitors; this is the per-query guard
-// so no data access ever runs without a user id to scope it to.
+// Call at the top of every page and server action that touches user data.
+// Signed-out visitors are redirected to sign in; the returned id scopes
+// every query to the current user.
 export async function requireUserId(): Promise<string> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Not signed in");
+  const { userId } = await auth.protect();
   return userId;
 }
