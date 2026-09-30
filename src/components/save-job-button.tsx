@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveJob, type SaveJobInput } from "@/app/search/actions";
+import { saveJob, type SaveJobInput, type SaveJobResult } from "@/app/search/actions";
 
 export function SaveJobButton({ job, saved }: { job: SaveJobInput; saved: boolean }) {
   const [isSaved, setIsSaved] = useState(saved);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<"retry" | "invalid" | null>(null);
   const [pending, startTransition] = useTransition();
 
   if (isSaved) {
     return <span className="text-sm text-accent">Saved</span>;
+  }
+  if (error === "invalid") {
+    return <span className="text-sm text-muted">Can&apos;t save this listing</span>;
   }
 
   return (
@@ -18,13 +21,13 @@ export function SaveJobButton({ job, saved }: { job: SaveJobInput; saved: boolea
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          const res = await saveJob(job).catch(() => ({ ok: false }));
-          setFailed(!res.ok);
+          const res: SaveJobResult = await saveJob(job).catch(() => ({ ok: false, retryable: true }));
           if (res.ok) setIsSaved(true);
+          else setError(res.retryable ? "retry" : "invalid");
         })
       }
     >
-      {pending ? "Saving…" : failed ? "Retry save" : "Save"}
+      {pending ? "Saving…" : error === "retry" ? "Retry save" : "Save"}
     </button>
   );
 }
