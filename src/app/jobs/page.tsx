@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { jobStatus, savedJobs, type JobStatus, type SavedJob } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { removeJob, updateJob } from "./actions";
+import { RemoveJobForm, UpdateJobForm } from "./job-row-forms";
 
 const STATUS_LABELS: Record<JobStatus, string> = {
   saved: "Saved",
@@ -84,24 +84,17 @@ function SavedJobCard({ job }: { job: SavedJob }) {
         {job.title}
       </a>
       <p className="text-sm text-muted">{meta}</p>
-      <form action={updateJob} className="mt-3 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
-        <input type="hidden" name="id" value={job.id} />
-        <select name="status" defaultValue={job.status} className="input w-auto">
-          {jobStatus.enumValues.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <input name="notes" defaultValue={job.notes} placeholder="Notes (recruiter, interview date…)" className="input" />
-        <button className="btn-ghost">Update</button>
-      </form>
+      <UpdateJobForm
+        id={job.id}
+        status={job.status}
+        notes={job.notes}
+        statuses={jobStatus.enumValues.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+      />
       <div className="mt-2 flex items-center justify-between text-xs text-muted">
         <span>
           {job.source && <>via {job.source} · </>}saved {job.createdAt.toLocaleDateString("en-MY")}
         </span>
-        <form action={removeJob}>
-          <input type="hidden" name="id" value={job.id} />
-          <button className="hover:text-foreground hover:underline">Remove</button>
-        </form>
+        <RemoveJobForm id={job.id} />
       </div>
     </li>
   );
