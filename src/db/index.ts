@@ -7,7 +7,7 @@ type Db = PostgresJsDatabase<typeof schema>;
 
 // Created on first use, not at import, so `next build` works without
 // DATABASE_URL. One client is reused across dev hot reloads. `prepare: false`
-// keeps it compatible with pooled (PgBouncer) connection strings like Neon's.
+// keeps it compatible with pooled (PgBouncer) connection strings.
 const globalForDb = globalThis as unknown as { db?: Db };
 
 export function getDb(): Db {
