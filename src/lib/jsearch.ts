@@ -29,7 +29,8 @@ const apiJob = z.object({
   employer_logo: z.string().nullish(),
   job_publisher: z.string().nullish(),
   job_employment_type: z.string().nullish(),
-  job_apply_link: z.string(),
+  // Listings without a usable link can't be applied to or saved; drop them.
+  job_apply_link: z.url().max(2000),
   job_description: z.string().nullish(),
   job_is_remote: z.boolean().nullish(),
   job_posted_at_datetime_utc: z.string().nullish(),
@@ -67,7 +68,7 @@ export type Job = {
 
 export type SearchResult =
   | { ok: true; jobs: Job[]; nextCursor: string | null; mock: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string; expired?: boolean };
 
 export async function searchJobs(params: SearchParams): Promise<SearchResult> {
   const apiKey = process.env.JSEARCH_API_KEY;
@@ -93,6 +94,7 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult> {
     res = await fetch(url, {
       headers: { "x-api-key": apiKey },
       next: { revalidate: CACHE_SECONDS },
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     return { ok: false, error: "Couldn't reach the job search service. Try again." };
@@ -100,7 +102,12 @@ export async function searchJobs(params: SearchParams): Promise<SearchResult> {
   if (res.status === 429) {
     return { ok: false, error: "Monthly search limit reached on the job search service." };
   }
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, error: "Job search isn't configured correctly (API key rejected)." };
+  }
   if (!res.ok) {
+    // Page cursors expire; a failed follow-up page is almost always that.
+    if (params.cursor) return { ok: false, error: "Those results expired. Search again.", expired: true };
     return { ok: false, error: `Job search failed (HTTP ${res.status}).` };
   }
 
@@ -124,13 +131,14 @@ function toJob(j: z.infer<typeof apiJob>): Job {
   const location =
     j.job_location ?? [j.job_city, j.job_state].filter(Boolean).join(", ");
   return {
-    id: j.job_id,
-    title: j.job_title,
-    company: j.employer_name ?? "Unknown company",
+    // Lengths match the limits saveJob accepts, so every listing shown can be saved.
+    id: j.job_id.slice(0, 200),
+    title: j.job_title.slice(0, 300),
+    company: (j.employer_name ?? "Unknown company").slice(0, 200),
     logo: j.employer_logo ?? null,
-    location,
+    location: location.slice(0, 200),
     url: j.job_apply_link,
-    source: j.job_publisher ?? "",
+    source: (j.job_publisher ?? "").slice(0, 100),
     employmentType: j.job_employment_type ?? "",
     isRemote: j.job_is_remote === true,
     postedAt: j.job_posted_at_datetime_utc ?? null,
@@ -140,10 +148,14 @@ function toJob(j: z.infer<typeof apiJob>): Job {
 }
 
 // The same role is often listed on several job boards; keep the first copy.
+export function jobKey(title: string, company: string): string {
+  return `${title}|${company}`.toLowerCase();
+}
+
 function dedupe(jobs: Job[]): Job[] {
   const seen = new Set<string>();
   return jobs.filter((j) => {
-    const key = `${j.title}|${j.company}`.toLowerCase();
+    const key = jobKey(j.title, j.company);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
