@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { profiles, savedJobs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { DATE_POSTED, EMPLOYMENT_TYPES, searchJobs, type Job } from "@/lib/jsearch";
+import { DATE_POSTED, EMPLOYMENT_TYPES, jobKey, searchJobs, type Job } from "@/lib/jsearch";
 import { SaveJobButton } from "@/components/save-job-button";
 
 const DATE_LABELS: Record<(typeof DATE_POSTED)[number], string> = {
@@ -42,18 +42,24 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const cursor = str(sp.cursor) || undefined;
 
   const [profile] = await getDb().select().from(profiles).where(eq(profiles.userId, userId));
+  // Fall back to the profile's location so the box and the results agree.
+  const where = loc || profile?.location || "";
   const result = q
-    ? await searchJobs({ query: q, location: loc, datePosted: date, employmentType: type, remoteOnly: remote, cursor })
+    ? await searchJobs({ query: q, location: where, datePosted: date, employmentType: type, remoteOnly: remote, cursor })
     : null;
 
-  let savedIds = new Set<string>();
+  // A job can come back under a different id from another job board, so
+  // match saved jobs by title/company/location as well as by id.
+  let saved = new Set<string>();
   if (result?.ok) {
     const rows = await getDb()
-      .select({ jobId: savedJobs.jobId })
+      .select({ jobId: savedJobs.jobId, title: savedJobs.title, company: savedJobs.company, location: savedJobs.location })
       .from(savedJobs)
       .where(eq(savedJobs.userId, userId));
-    savedIds = new Set(rows.map((r) => r.jobId));
+    saved = new Set(rows.flatMap((r) => [r.jobId, jobKey(r)]));
   }
+  const isSaved = (job: Job) => saved.has(job.id) || saved.has(jobKey(job));
+  const searchQs = new URLSearchParams({ q, loc: where, date, ...(type ? { type } : {}), ...(remote ? { remote: "1" } : {}) });
 
   const suggestions = (profile?.desiredRoles ?? "")
     .split(",")
@@ -63,7 +69,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
   const nextHref =
     result?.ok && result.nextCursor
-      ? `/search?${new URLSearchParams({ q, loc, date, ...(type ? { type } : {}), ...(remote ? { remote: "1" } : {}), cursor: result.nextCursor })}`
+      ? `/search?${searchQs}&cursor=${encodeURIComponent(result.nextCursor)}`
       : null;
 
   return (
@@ -72,7 +78,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         <input name="q" defaultValue={q} placeholder="Job title, skill or company" className="input" required />
         <input
           name="loc"
-          defaultValue={loc || profile?.location || ""}
+          defaultValue={where}
           placeholder="Anywhere in Malaysia"
           className="input"
         />
@@ -119,6 +125,12 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       {result && !result.ok && (
         <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           {result.error}
+          {result.expired && (
+            <>
+              {" "}
+              <Link href={`/search?${searchQs}`} className="underline">Back to page 1</Link>
+            </>
+          )}
         </p>
       )}
 
@@ -132,7 +144,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           ) : (
             <ul className="space-y-3">
               {result.jobs.map((job) => (
-                <JobCard key={job.id} job={job} saved={savedIds.has(job.id)} />
+                <JobCard key={job.id} job={job} saved={isSaved(job)} />
               ))}
             </ul>
           )}
